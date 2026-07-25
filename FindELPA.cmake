@@ -1,12 +1,13 @@
 # .rst: FindELPA
 # --------
 #
-# Find the ELPA eigenvalue solver library. Searches for elpa_openmp when OpenMP
-# is enabled.
+# Find the ELPA eigenvalue solver library.
 #
-# Supports two layouts: 1. Standard: include/elpa/elpa.h 2. Spack/versioned:
-# include/elpa[_openmp]-{VER}/elpa/elpa.h with modules in
-# include/elpa[_openmp]-{VER}/modules/
+# Strategy: 1. pkg-config (preferred; handles version-specific dirs
+# automatically) 2. Manual fallback: find_path (with glob for version-specific
+# layout) + find_library
+#
+# When VASP_OPENMP is ON, prefers elpa_openmp over elpa.
 #
 # Imported target::
 #
@@ -22,13 +23,58 @@ foreach(_v ELPA_ROOT Elpa_ROOT)
   endif()
 endforeach()
 
-# When ROOT is explicit, don't fall back to system paths.
+# --- 1) pkg-config (preferred) ---
+find_package(PkgConfig QUIET)
+if(PKG_CONFIG_FOUND)
+  if(_ELPA_PATHS)
+    set(_save_pkg "$ENV{PKG_CONFIG_PATH}")
+    foreach(_p IN LISTS _ELPA_PATHS)
+      if(EXISTS "${_p}/lib/pkgconfig" OR EXISTS "${_p}/lib64/pkgconfig")
+        set(ENV{PKG_CONFIG_PATH}
+            "${_p}/lib/pkgconfig:${_p}/lib64/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+      endif()
+    endforeach()
+  endif()
+
+  if(VASP_OPENMP)
+    pkg_search_module(ELPA QUIET IMPORTED_TARGET GLOBAL elpa_openmp)
+  endif()
+  if(NOT ELPA_FOUND)
+    pkg_search_module(ELPA QUIET IMPORTED_TARGET GLOBAL elpa)
+  endif()
+
+  # Restore PKG_CONFIG_PATH
+  if(_ELPA_PATHS)
+    set(ENV{PKG_CONFIG_PATH} "${_save_pkg}")
+  endif()
+endif()
+
+if(ELPA_FOUND)
+  # pkg-config gives base include dir; append /modules for Fortran .mod files
+  set(_elpa_inc_dirs ${ELPA_INCLUDE_DIRS})
+  foreach(_d ${ELPA_INCLUDE_DIRS})
+    if(IS_DIRECTORY "${_d}/modules")
+      list(APPEND _elpa_inc_dirs "${_d}/modules")
+    endif()
+  endforeach()
+  list(REMOVE_DUPLICATES _elpa_inc_dirs)
+
+  if(NOT TARGET ELPA::ELPA)
+    add_library(ELPA::ELPA INTERFACE IMPORTED)
+  endif()
+  set_target_properties(
+    ELPA::ELPA PROPERTIES INTERFACE_LINK_LIBRARIES "${ELPA_LINK_LIBRARIES}"
+                          INTERFACE_INCLUDE_DIRECTORIES "${_elpa_inc_dirs}")
+  message(STATUS "Found ELPA (pkg-config): ${ELPA_LINK_LIBRARIES}")
+  return()
+endif()
+
+# --- 2) Manual fallback ---
 if(_ELPA_PATHS)
   set(_ELPA_NO_DEFAULT NO_DEFAULT_PATH)
 endif()
 
-# --- locate header ---
-# Try standard find_path first, then glob for version-specific layout.
+# Standard layout: include/elpa/elpa.h
 find_path(
   ELPA_INCLUDE_DIR
   NAMES elpa/elpa.h
@@ -51,7 +97,7 @@ if(NOT ELPA_INCLUDE_DIR)
   endforeach()
 endif()
 
-# Append modules subdir: elpa*/modules/
+# Append modules subdir
 if(ELPA_INCLUDE_DIR)
   file(GLOB _ELPA_MOD "${ELPA_INCLUDE_DIR}/modules"
        "${ELPA_INCLUDE_DIR}/elpa*/modules")
@@ -61,7 +107,6 @@ if(ELPA_INCLUDE_DIR)
   endif()
 endif()
 
-# --- locate library ---
 if(VASP_OPENMP)
   find_library(
     ELPA_LIBRARIES
@@ -83,13 +128,7 @@ find_package_handle_standard_args(
   FAIL_MESSAGE "Set ELPA_ROOT to the ELPA installation (>= 2021)")
 
 if(ELPA_FOUND)
-  if(NOT ELPA_MESSAGE_SHOWN)
-    message(STATUS "Found ELPA: ${ELPA_LIBRARIES}")
-    message(STATUS "  ELPA include: ${ELPA_INCLUDE_DIR}")
-  endif()
-  set(ELPA_MESSAGE_SHOWN
-      TRUE
-      CACHE INTERNAL "flag")
+  message(STATUS "Found ELPA (fallback): ${ELPA_LIBRARIES}")
   if(NOT TARGET ELPA::ELPA)
     add_library(ELPA::ELPA UNKNOWN IMPORTED)
     set_target_properties(
