@@ -4,16 +4,10 @@
 # Find the ELPA eigenvalue solver library. Searches for elpa_openmp when OpenMP
 # is enabled.
 #
-# Result variables::
-#
-# ELPA_FOUND        - True if found ELPA_LIBRARIES    - The libraries
-# ELPA_INCLUDE_DIR  - Include directories
-#
 # Imported target::
 #
 # ELPA::ELPA
 
-set(_ELPA_PATHS)
 set(_ELPA_PATHS)
 foreach(_v ELPA_ROOT Elpa_ROOT)
   if(DEFINED ${_v} AND NOT "${${_v}}" STREQUAL "")
@@ -24,11 +18,17 @@ foreach(_v ELPA_ROOT Elpa_ROOT)
   endif()
 endforeach()
 
+# When ROOT is explicit, don't fall back to system paths (avoids finding a
+# system ELPA header without matching Fortran modules).
+if(_ELPA_PATHS)
+  set(_ELPA_NO_DEFAULT NO_DEFAULT_PATH)
+endif()
+
 find_path(
   ELPA_INCLUDE_DIR
   NAMES elpa/elpa.h
   HINTS ${_ELPA_PATHS}
-  PATH_SUFFIXES "include" "include/elpa")
+  PATH_SUFFIXES "include" "include/elpa" ${_ELPA_NO_DEFAULT})
 
 # spack module dir pattern: include/{elpa|elpa_openmp}-{VER}/modules/
 if(ELPA_INCLUDE_DIR)
@@ -45,13 +45,13 @@ if(VASP_OPENMP)
     ELPA_LIBRARIES
     NAMES elpa_openmp elpa
     HINTS ${_ELPA_PATHS}
-    PATH_SUFFIXES "lib" "lib64")
+    PATH_SUFFIXES "lib" "lib64" ${_ELPA_NO_DEFAULT})
 else()
   find_library(
     ELPA_LIBRARIES
     NAMES elpa
     HINTS ${_ELPA_PATHS}
-    PATH_SUFFIXES "lib" "lib64")
+    PATH_SUFFIXES "lib" "lib64" ${_ELPA_NO_DEFAULT})
 endif()
 
 include(FindPackageHandleStandardArgs)
@@ -77,4 +77,4 @@ if(ELPA_FOUND)
   endif()
 endif()
 
-mark_as_advanced(ELPA_FOUND ELPA_LIBRARIES ELPA_INCLUDE_DIR)
+mark_as_advanced(ELPA_LIBRARIES ELPA_INCLUDE_DIR)
