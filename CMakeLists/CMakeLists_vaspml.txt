@@ -1,6 +1,6 @@
 # CMakeLists for VASPml - machine learning library for VASP (experimental)
-# Builds libvaspml (linked into vasp_std/gam/ncl) and standalone tool executables.
-# Activated via -DVASP_VASPML=ON.
+# Builds libvaspml (linked into vasp_std/gam/ncl) and standalone tool
+# executables. Activated via -DVASP_VASPML=ON.
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,97 +8,141 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # MPI CXX is found by the root CMakeLists when VASP_VASPML=ON.
 if(NOT TARGET MPI::MPI_CXX)
-    message(FATAL_ERROR "VASPml requires MPI CXX but MPI::MPI_CXX was not found. "
-        "Ensure VASP_VASPML=ON is set so the root CMakeLists finds MPI CXX.")
+  message(
+    FATAL_ERROR
+      "VASPml requires MPI CXX but MPI::MPI_CXX was not found. "
+      "Ensure VASP_VASPML=ON is set so the root CMakeLists finds MPI CXX.")
 endif()
 
 # -----------------------------------------------------------------------
 # libvaspml static library
 # -----------------------------------------------------------------------
 file(GLOB VASPML_LIB_SOURCES CONFIGURE_DEPENDS
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/libvaspml/*.cpp
-)
+     ${CMAKE_CURRENT_SOURCE_DIR}/src/libvaspml/*.cpp)
 
 add_library(vaspml STATIC ${VASPML_LIB_SOURCES})
 target_compile_features(vaspml PUBLIC cxx_std_17)
 target_include_directories(vaspml
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/libvaspml
-)
+                           PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/libvaspml)
 target_link_libraries(vaspml PUBLIC MPI::MPI_CXX BLAS::BLAS)
 
-# std::filesystem lives in a separate library (stdc++fs) on older toolchains (GCC < 9).
-# NVHPC and other compilers may use such a toolchain as their host C++ standard library.
+# std::filesystem lives in a separate library (stdc++fs) on older toolchains
+# (GCC < 9). NVHPC and other compilers may use such a toolchain as their host
+# C++ standard library.
 include(CheckCXXSourceCompiles)
 set(CMAKE_REQUIRED_STANDARD 17)
-check_cxx_source_compiles("
+check_cxx_source_compiles(
+  "
     #include <filesystem>
     int main() { return std::filesystem::exists(\"/tmp\") ? 0 : 1; }
-" VASPML_STDFS_LINKS)
+"
+  VASPML_STDFS_LINKS)
 if(NOT VASPML_STDFS_LINKS)
-    if(NOT VASPML_MESSAGE_SHOWN)
-        message(STATUS "VASPml: linking stdc++fs for std::filesystem support")
-    endif()
-    target_link_libraries(vaspml PUBLIC stdc++fs)
+  if(NOT VASPML_MESSAGE_SHOWN)
+    message(STATUS "VASPml: linking stdc++fs for std::filesystem support")
+  endif()
+  target_link_libraries(vaspml PUBLIC stdc++fs)
 endif()
 
-# Auto-detect whether MKL CBLAS headers are needed.
-# Intel compilers define VASPML_USE_MKL themselves via __INTEL_COMPILER/__INTEL_LLVM_COMPILER
-# in Linalg.hpp, so no flag is needed there. For non-Intel compilers building against MKL
-# (e.g. GNU + MKL), we detect this and set VASPML_USE_MKL explicitly.
+# Auto-detect whether MKL CBLAS headers are needed. Intel compilers define
+# VASPML_USE_MKL themselves via __INTEL_COMPILER/__INTEL_LLVM_COMPILER in
+# Linalg.hpp, so no flag is needed there. For non-Intel compilers building
+# against MKL (e.g. GNU + MKL), we detect this and set VASPML_USE_MKL
+# explicitly.
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Intel|IntelLLVM")
-    set(_vaspml_mkl FALSE)
-    if(BLA_VENDOR MATCHES "Intel")
-        set(_vaspml_mkl TRUE)
-    elseif(VASP_NVHPC_MKL)
-        set(_vaspml_mkl TRUE)
-    elseif(BLAS_LIBRARIES MATCHES "mkl")
-        set(_vaspml_mkl TRUE)
-    elseif(DEFINED ENV{MKLROOT} OR DEFINED ENV{ONEAPI_ROOT})
-        set(_vaspml_mkl TRUE)
-    endif()
-    if(_vaspml_mkl)
-        if(NOT VASPML_MESSAGE_SHOWN)
-            message(STATUS "VASPml: non-Intel compiler with MKL detected, enabling VASPML_USE_MKL")
-        endif()
-        target_compile_definitions(vaspml PUBLIC VASPML_USE_MKL)
-    endif()
-endif()
-
-# Locate the CBLAS header directory.
-# MKL: mkl_cblas.h lives under $MKLROOT/include; OpenBLAS: cblas.h under $OPENBLAS_ROOT/include.
-find_path(CBLAS_INCLUDE_DIR
-    NAMES mkl_cblas.h cblas.h
-    HINTS
-        $ENV{MKLROOT}
-        $ENV{ONEAPI_ROOT}/mkl/latest
-        ${BLAS_ROOT}    $ENV{BLAS_ROOT}
-        $ENV{OPENBLAS_ROOT}
-    PATH_SUFFIXES include
-)
-if(CBLAS_INCLUDE_DIR)
-    target_include_directories(vaspml PRIVATE ${CBLAS_INCLUDE_DIR})
-else()
+  set(_vaspml_mkl FALSE)
+  if(BLA_VENDOR MATCHES "Intel")
+    set(_vaspml_mkl TRUE)
+  elseif(VASP_NVHPC_MKL)
+    set(_vaspml_mkl TRUE)
+  elseif(BLAS_LIBRARIES MATCHES "mkl")
+    set(_vaspml_mkl TRUE)
+  elseif(DEFINED ENV{MKLROOT} OR DEFINED ENV{ONEAPI_ROOT})
+    set(_vaspml_mkl TRUE)
+  endif()
+  if(_vaspml_mkl)
     if(NOT VASPML_MESSAGE_SHOWN)
-        message(WARNING "VASPml: CBLAS include directory not found. Set MKLROOT, OPENBLAS_ROOT, or BLAS_ROOT.")
+      message(
+        STATUS
+          "VASPml: non-Intel compiler with MKL detected, enabling VASPML_USE_MKL"
+      )
     endif()
+    target_compile_definitions(vaspml PUBLIC VASPML_USE_MKL)
+  endif()
 endif()
 
-set(VASPML_MESSAGE_SHOWN TRUE CACHE INTERNAL "VASPml messages shown flag")
+# Locate the CBLAS header directory. MKL: mkl_cblas.h lives under
+# $MKLROOT/include; OpenBLAS: cblas.h under $OPENBLAS_ROOT/include.
+find_path(
+  CBLAS_INCLUDE_DIR
+  NAMES mkl_cblas.h cblas.h
+  HINTS $ENV{MKLROOT} $ENV{ONEAPI_ROOT}/mkl/latest ${BLAS_ROOT} $ENV{BLAS_ROOT}
+        $ENV{OPENBLAS_ROOT}
+  PATH_SUFFIXES include)
+if(CBLAS_INCLUDE_DIR)
+  target_include_directories(vaspml PRIVATE ${CBLAS_INCLUDE_DIR})
+else()
+  if(NOT VASPML_MESSAGE_SHOWN)
+    message(
+      WARNING
+        "VASPml: CBLAS include directory not found. Set MKLROOT, OPENBLAS_ROOT, or BLAS_ROOT."
+    )
+  endif()
+endif()
 
-install(TARGETS vaspml
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
+set(VASPML_MESSAGE_SHOWN
+    TRUE
+    CACHE INTERNAL "VASPml messages shown flag")
+
+# -----------------------------------------------------------------------
+# GRACE force field support (optional, requires TensorFlow + cppflow)
+# -----------------------------------------------------------------------
+if(VASP_VASPML_GRACE)
+  find_package(TensorFlow MODULE REQUIRED)
+  target_link_libraries(vaspml PUBLIC TensorFlow::tensorflow_cc)
+  if(TARGET TensorFlow::tensorflow_framework)
+    target_link_libraries(vaspml PUBLIC TensorFlow::tensorflow_framework)
+  endif()
+  # cppflow is a header-only library; locate its include dir
+  find_path(
+    CPPFLOW_INCLUDE_DIR
+    NAMES cppflow/model
+    HINTS $ENV{CPPFLOW_ROOT} ${CPPFLOW_ROOT} $ENV{TENSORFLOW_ROOT}
+    PATH_SUFFIXES include cppflow/include)
+  if(CPPFLOW_INCLUDE_DIR)
+    target_include_directories(vaspml PRIVATE ${CPPFLOW_INCLUDE_DIR})
+    message(
+      STATUS "VASPml GRACE: using cppflow headers from ${CPPFLOW_INCLUDE_DIR}")
+  else()
+    message(
+      WARNING "VASPml GRACE: cppflow headers not found. Set CPPFLOW_ROOT.")
+  endif()
+  # Imprint TensorFlow lib path into global rpath so no env is needed at
+  # runtime. vaspml is STATIC so RPATH properties have no effect here; instead
+  # we propagate the lib dir to the parent scope where root.txt collects
+  # VASP_EXTERNAL_LIB_DIRS into CMAKE_INSTALL_RPATH for the executables.
+  get_target_property(_tf_loc TensorFlow::tensorflow_cc IMPORTED_LOCATION)
+  if(_tf_loc)
+    get_filename_component(_tf_dir ${_tf_loc} DIRECTORY)
+    list(APPEND VASP_EXTERNAL_LIB_DIRS ${_tf_dir})
+    set(VASP_EXTERNAL_LIB_DIRS
+        ${VASP_EXTERNAL_LIB_DIRS}
+        PARENT_SCOPE)
+  endif()
+  message(STATUS "VASPml GRACE: enabled (TensorFlow + cppflow)")
+endif()
+
+install(TARGETS vaspml ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # -----------------------------------------------------------------------
 # VASPml standalone application executables
 # -----------------------------------------------------------------------
 file(GLOB VASPML_APP_SOURCES CONFIGURE_DEPENDS
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/applications/*.cpp
-)
+     ${CMAKE_CURRENT_SOURCE_DIR}/src/applications/*.cpp)
 
 foreach(app_source ${VASPML_APP_SOURCES})
-    get_filename_component(app_name ${app_source} NAME_WE)
-    add_executable(${app_name} ${app_source})
-    target_link_libraries(${app_name} PRIVATE vaspml MPI::MPI_CXX)
-    install(TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_BINDIR})
+  get_filename_component(app_name ${app_source} NAME_WE)
+  add_executable(${app_name} ${app_source})
+  target_link_libraries(${app_name} PRIVATE vaspml MPI::MPI_CXX)
+  install(TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach()

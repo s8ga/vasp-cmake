@@ -93,6 +93,9 @@ BLAS and LAPACK are mandatory and are detected via the default cmake packages. S
 
 - `-DVASP_PLUGINS=ON|OFF`: enable VASP plugin support (default: OFF)
 - `-DVASP_VASPML=ON|OFF`: enable VASPml machine learning library (experimental). Builds `libvaspml`, links it into the VASP executables, and compiles standalone VASPml tools. Requires MPI CXX and a CBLAS provider (OpenBLAS, MKL, etc.). When using MKL with a non-Intel compiler, `VASPML_USE_MKL` is set automatically. (default: OFF)
+- `-DVASP_VASPML_GRACE=ON|OFF`: enable GRACE force fields (requires `VASP_VASPML=ON` + TensorFlow `libtensorflow_cc` + cppflow headers; set `TENSORFLOW_ROOT` and `CPPFLOW_ROOT`). (default: OFF)
+- `-DVASP_VASPSOL=ON|OFF`: add the `-Dsol_compat` preprocessor define for VASPsol solvation model. The source patch (overwriting `solvation.F`) must be applied separately. (default: OFF)
+- `-DVASP_VTST=ON|OFF`: enable VTST transition-state tools. Requires VTST source injection into `src/` (e.g. via spack or a patch script); the build system will compile `pyamff_fortran` as a static library and link it. (default: OFF)
 - `-DVASP_QD_EMULATE=ON|OFF`: use QD library for quadruple precision types (default: OFF)
 - `-DVASP_PROFILING=ON|OFF`: enable profiling (default: OFF)
 
@@ -102,7 +105,12 @@ BLAS and LAPACK are mandatory and are detected via the default cmake packages. S
 - `-DVASP_HDF5=ON|OFF`: enable HDF5 support (default: ON)
 - `-DVASP_LIBXC=ON|OFF`: enable Libxc support (default: OFF)
 - `-DVASP_LIBBEEF=ON|OFF`: enable libbeef (van-der-Waals functionals) (default: OFF)
-- `-DVASP_DFTD4=ON|OFF`: enable DFTD4 (default: OFF)
+- `-DVASP_DFTD4=ON|OFF`: enable DFTD4 van der Waals correction (default: OFF)
+- `-DVASP_DFTD4_API=AUTO|V3|V4`: DFTD4 API version; AUTO detects from the dftd4 package version. V3 for DFTD4 <= 3.7.0 (`-DDFTD4_API_V3`), V4 for >= 4.0.0 (`-DDFTD4`). Note: AUTO requires a CMake-config install (`dftd4-config.cmake`); for manual/non-CMake installs, set `V3` or `V4` explicitly. (default: AUTO)
+- `-DVASP_SDFTD3=ON|OFF`: enable simple-DFT-D3 van der Waals correction (default: OFF)
+- `-DVASP_LIBMBD=ON|OFF`: enable libMBD many-body dispersion (default: OFF)
+- `-DVASP_ELPA=ON|OFF`: enable ELPA eigenvalue solvers (requires ScaLAPACK; default: OFF)
+- `-DVASP_SCPC=ON|OFF`: enable Self-Consistent Potential Correction (requires DL_MG + PSPFFT; default: OFF)
 - `-DVASP_WANNIER90=ON|OFF`: enable Wannier90 (default: OFF)
 - `-DVASP_USE_NVPL=AUTO|ON|OFF`: Use NVIDIA NVPL BLAS/LAPACK/ScaLAPACK  (default:AUTO)
 - `-DVASP_VECLIBFORT=ON|OFF`: Use VecLibFort for BLAS/LAPACK on Mac OS to use the Accelerate framework (default:OFF)

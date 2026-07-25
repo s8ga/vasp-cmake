@@ -119,6 +119,15 @@ option(VASP_DFTD4 "Enable DFTD4 library" OFF)
 option(VASP_WANNIER90 "Enable Wannier90 library" OFF)
 option(VASP_HDF5 "Enable HDF5 library support" ON)
 option(VASP_LIBXC "Enable Libxc library" OFF)
+option(VASP_ELPA "Enable ELPA eigenvalue solvers (requires ScaLAPACK)" OFF)
+option(VASP_SDFTD3 "Enable simple-DFT-D3 van der Waals correction" OFF)
+option(VASP_LIBMBD "Enable libMBD many-body dispersion" OFF)
+option(VASP_SCPC "Enable Self-Consistent Potential Correction (requires DL_MG + PSPFFT)" OFF)
+set(VASP_DFTD4_API "AUTO" CACHE STRING "DFTD4 API version: AUTO|V3|V4 (AUTO detects from dftd4 version)")
+set_property(CACHE VASP_DFTD4_API PROPERTY STRINGS AUTO V3 V4)
+cmake_dependent_option(VASP_VASPML_GRACE "Enable GRACE force fields (requires VASPml + TensorFlow)" OFF "VASP_VASPML" OFF)
+option(VASP_VASPSOL "Enable VASPsol solvation compatibility define (source patch must be applied separately)" OFF)
+option(VASP_VTST "Enable VTST tools (requires VTST source injection into src/)" OFF)
 # vecLibFort: Fortran-friendly wrapper around Apple's vecLib (Accelerate) for macOS
 option(VASP_VECLIBFORT "Use vecLibFort for BLAS/LAPACK on macOS" OFF)
 set(VASP_VECLIBFORT_ROOT "/opt/homebrew" CACHE STRING "Root path of the vecLibFort installation (e.g. /opt/homebrew or a Cellar path)")
@@ -343,8 +352,78 @@ if(VASP_WANNIER90)
   list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
 endif()
 
-if(VASP_LIBBEEF OR VASP_DFTD4)
-  message(FATAL_ERROR "VASP_LIBBEEF and VASP_DFTD4 not yet supported through CMake.")
+if(VASP_LIBBEEF)
+  find_package(LibBEEF MODULE REQUIRED)
+  list(APPEND VASP_EXTERNAL_LIBS LibBEEF::libbeef)
+  get_target_property(lib_path LibBEEF::libbeef INTERFACE_LINK_LIBRARIES)
+  if(lib_path)
+    get_filename_component(lib_dir ${lib_path} DIRECTORY)
+    list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
+  endif()
+endif()
+
+if(VASP_DFTD4)
+  find_package(DFTD4 MODULE REQUIRED)
+  list(APPEND VASP_EXTERNAL_LIBS DFTD4::dftd4)
+  get_target_property(lib_path DFTD4::dftd4 IMPORTED_LOCATION)
+  if(lib_path)
+    get_filename_component(lib_dir ${lib_path} DIRECTORY)
+    list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
+  endif()
+  # resolve DFTD4 API version: < 4.0.0 uses the old V3 API
+  if(VASP_DFTD4_API STREQUAL "AUTO")
+    if(DEFINED dftd4_VERSION AND dftd4_VERSION VERSION_LESS "4.0.0")
+      set(VASP_DFTD4_USE_API_V3 TRUE)
+    endif()
+  elseif(VASP_DFTD4_API STREQUAL "V3")
+    set(VASP_DFTD4_USE_API_V3 TRUE)
+  endif()
+endif()
+
+if(VASP_SDFTD3)
+  find_package(SDFTD3 MODULE REQUIRED)
+  list(APPEND VASP_EXTERNAL_LIBS SDFTD3::sdftd3)
+  get_target_property(lib_path SDFTD3::sdftd3 IMPORTED_LOCATION)
+  if(lib_path)
+    get_filename_component(lib_dir ${lib_path} DIRECTORY)
+    list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
+  endif()
+endif()
+
+if(VASP_LIBMBD)
+  find_package(LIBMBD MODULE REQUIRED)
+  list(APPEND VASP_EXTERNAL_LIBS LIBMBD::libmbd)
+  get_target_property(lib_path LIBMBD::libmbd IMPORTED_LOCATION)
+  if(lib_path)
+    get_filename_component(lib_dir ${lib_path} DIRECTORY)
+    list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
+  endif()
+endif()
+
+if(VASP_ELPA)
+  if(NOT VASP_SCALAPACK)
+    message(FATAL_ERROR "VASP_ELPA requires ScaLAPACK (VASP_SCALAPACK=ON).")
+  endif()
+  find_package(ELPA MODULE REQUIRED)
+  list(APPEND VASP_EXTERNAL_LIBS ELPA::ELPA)
+  get_target_property(lib_path ELPA::ELPA IMPORTED_LOCATION)
+  if(lib_path)
+    get_filename_component(lib_dir ${lib_path} DIRECTORY)
+    list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
+  endif()
+endif()
+
+if(VASP_SCPC)
+  find_package(DL_MG MODULE REQUIRED)
+  find_package(PSPFFT MODULE REQUIRED)
+  list(APPEND VASP_EXTERNAL_LIBS DL_MG::dlmg PSPFFT::pspfft)
+  foreach(_scpc_tgt DL_MG::dlmg PSPFFT::pspfft)
+    get_target_property(lib_path ${_scpc_tgt} IMPORTED_LOCATION)
+    if(lib_path)
+      get_filename_component(lib_dir ${lib_path} DIRECTORY)
+      list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
+    endif()
+  endforeach()
 endif()
 
 #-----------------------------
@@ -654,6 +733,13 @@ set(VASP_DEFINITIONS
   $<$<BOOL:${VASP_VASPML}>:libvaspml>
   $<$<BOOL:${VASP_LIBXC}>:USELIBXC>
   $<$<BOOL:${VASP_WANNIER90}>:VASP2WANNIER90>
+  $<$<BOOL:${VASP_LIBBEEF}>:libbeef>
+  $<$<BOOL:${VASP_SDFTD3}>:SDFTD3>
+  $<$<BOOL:${VASP_LIBMBD}>:LIBMBD>
+  $<$<BOOL:${VASP_ELPA}>:ELPA>
+  $<$<BOOL:${VASP_SCPC}>:SCPC>
+  $<$<BOOL:${VASP_VASPML_GRACE}>:VASPML_ENABLE_GRACE>
+  $<$<BOOL:${VASP_VASPSOL}>:sol_compat>
   $<$<BOOL:${VASP_QD_EMULATE}>:qd_emulate>
   $<$<BOOL:${VASP_USE_ERF}>:USE_ERF>
   # nvhpc already defines _OPENACC with "-acc", but not defining it seems to cause issues with dependency detection with make. Ninja works without it.
@@ -669,6 +755,16 @@ set(VASP_DEFINITIONS
   # cray specific
   $<$<BOOL:${VASP_ROCM_HIP}>:CRAYHIP>
 )
+
+# DFTD4 API version: the define differs (DFTD4 vs DFTD4_API_V3),
+# added as plain strings so they bypass the generator-expression processing below.
+if(VASP_DFTD4)
+  if(VASP_DFTD4_USE_API_V3)
+    list(APPEND VASP_DEFINITIONS DFTD4_API_V3)
+  else()
+    list(APPEND VASP_DEFINITIONS DFTD4)
+  endif()
+endif()
 
 if(IFX_BUILD_DATE)
   list(APPEND VASP_DEFINITIONS __INTEL_COMPILER_BUILD_DATE=${IFX_BUILD_DATE})

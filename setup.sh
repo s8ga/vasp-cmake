@@ -84,3 +84,8 @@ link_cmakelists "src/oneapi"  "../../cmake/CMakeLists/CMakeLists_oneapi.txt"
 link_cmakelists "src/parser"  "../../cmake/CMakeLists/CMakeLists_parser.txt"
 link_cmakelists "src/vaspml" "../../cmake/CMakeLists/CMakeLists_vaspml.txt"
 link_cmakelists "testsuite"   "../cmake/CMakeLists/CMakeLists_testsuite.txt"
+
+# VTST pyamff_fortran: only link if the directory exists (VTST source injected)
+if [[ -d "${VASPROOT}/src/pyamff_fortran" ]]; then
+  link_cmakelists "src/pyamff_fortran" "../../cmake/CMakeLists/CMakeLists_pyamff_fortran.txt"
+fi
