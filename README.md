@@ -103,6 +103,7 @@ BLAS and LAPACK are mandatory and are detected via the default cmake packages. S
 - `-DVASP_LIBXC=ON|OFF`: enable Libxc support (default: OFF)
 - `-DVASP_LIBBEEF=ON|OFF`: enable libbeef (van-der-Waals functionals), not supported yet (default: OFF)
 - `-DVASP_DFTD4=ON|OFF`: enable DFTD4 (default: OFF). Found via the CMake package config shipped with dftd4, otherwise via `DFTD4_ROOT`. dftd4 >= 4 (D4S model) is compiled with `-DDFTD4`, older installations with `-DDFTD4_API_V3`; the choice is detected automatically
+- `-DVASP_SDFTD3=ON|OFF`: enable simple-DFTD3 (default: OFF). Found via the CMake package config shipped with simple-dftd3 (package `s-dftd3`), otherwise via `SDFTD3_ROOT` / `SIMPLE_DFTD3_ROOT`. Commonly a static archive, so its mctc-lib dependency is taken from the config target
 - `-DVASP_WANNIER90=ON|OFF`: enable Wannier90 (default: OFF)
 - `-DVASP_LIBMBD=ON|OFF`: enable libMBD many-body dispersion (default: OFF). Found via the CMake package config shipped with libmbd (package `Mbd`), otherwise via `LIBMBD_ROOT`
 - `-DVASP_USE_NVPL=AUTO|ON|OFF`: Use NVIDIA NVPL BLAS/LAPACK/ScaLAPACK  (default:AUTO)

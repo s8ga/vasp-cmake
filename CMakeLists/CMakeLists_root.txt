@@ -116,6 +116,7 @@ option(VASP_USE_ERF "use internal ERF implementation" OFF)
 
 option(VASP_LIBBEEF "Enable libbeef for van-der-Waals functionals" OFF)
 option(VASP_DFTD4 "Enable DFTD4 library" OFF)
+option(VASP_SDFTD3 "Enable simple-DFTD3 library" OFF)
 option(VASP_LIBMBD "Enable libMBD many-body dispersion library" OFF)
 option(VASP_WANNIER90 "Enable Wannier90 library" OFF)
 option(VASP_HDF5 "Enable HDF5 library support" ON)
@@ -368,6 +369,14 @@ if(VASP_LIBMBD)
       list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
     endif()
   endforeach()
+endif()
+
+if(VASP_SDFTD3)
+  find_package(SDFTD3 MODULE REQUIRED)
+  list(APPEND VASP_EXTERNAL_LIBS SDFTD3::sdftd3)
+  # no VASP_EXTERNAL_LIB_DIRS entry: simple-DFTD3 is commonly a static archive,
+  # which needs no RPATH. Its mctc-lib dependency is shared, but that library
+  # comes with its own imported target and CMAKE_INSTALL_RPATH_USE_LINK_PATH.
 endif()
 
 #-----------------------------
@@ -678,6 +687,7 @@ set(VASP_DEFINITIONS
   $<$<BOOL:${VASP_LIBXC}>:USELIBXC>
   $<$<BOOL:${VASP_WANNIER90}>:VASP2WANNIER90>
   $<$<BOOL:${VASP_LIBMBD}>:LIBMBD>
+  $<$<BOOL:${VASP_SDFTD3}>:SDFTD3>
   $<$<BOOL:${VASP_QD_EMULATE}>:qd_emulate>
   $<$<BOOL:${VASP_USE_ERF}>:USE_ERF>
   # nvhpc already defines _OPENACC with "-acc", but not defining it seems to cause issues with dependency detection with make. Ninja works without it.
