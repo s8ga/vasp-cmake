@@ -116,12 +116,12 @@ option(VASP_USE_ERF "use internal ERF implementation" OFF)
 
 option(VASP_LIBBEEF "Enable libbeef for van-der-Waals functionals" OFF)
 option(VASP_DFTD4 "Enable DFTD4 library" OFF)
+option(VASP_SDFTD3 "Enable simple-DFTD3 library" OFF)
+option(VASP_LIBMBD "Enable libMBD many-body dispersion library" OFF)
 option(VASP_WANNIER90 "Enable Wannier90 library" OFF)
 option(VASP_HDF5 "Enable HDF5 library support" ON)
 option(VASP_LIBXC "Enable Libxc library" OFF)
 option(VASP_ELPA "Enable ELPA eigenvalue solvers (requires ScaLAPACK)" OFF)
-option(VASP_SDFTD3 "Enable simple-DFT-D3 van der Waals correction" OFF)
-option(VASP_LIBMBD "Enable libMBD many-body dispersion" OFF)
 option(VASP_SCPC "Enable Self-Consistent Potential Correction (requires DL_MG + PSPFFT)" OFF)
 set(VASP_DFTD4_API "AUTO" CACHE STRING "DFTD4 API version: AUTO|V3|V4 (AUTO detects from dftd4 version)")
 set_property(CACHE VASP_DFTD4_API PROPERTY STRINGS AUTO V3 V4)
@@ -365,39 +365,31 @@ endif()
 if(VASP_DFTD4)
   find_package(DFTD4 MODULE REQUIRED)
   list(APPEND VASP_EXTERNAL_LIBS DFTD4::dftd4)
-  get_target_property(lib_path DFTD4::dftd4 IMPORTED_LOCATION)
-  if(lib_path)
-    get_filename_component(lib_dir ${lib_path} DIRECTORY)
-    list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
-  endif()
-  # resolve DFTD4 API version: < 4.0.0 uses the old V3 API
-  if(VASP_DFTD4_API STREQUAL "AUTO")
-    if(DEFINED dftd4_VERSION AND dftd4_VERSION VERSION_LESS "4.0.0")
-      set(VASP_DFTD4_USE_API_V3 TRUE)
+  foreach(lib_path IN LISTS DFTD4_LIBRARIES)
+    if(EXISTS "${lib_path}")
+      get_filename_component(lib_dir "${lib_path}" DIRECTORY)
+      list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
     endif()
-  elseif(VASP_DFTD4_API STREQUAL "V3")
-    set(VASP_DFTD4_USE_API_V3 TRUE)
-  endif()
-endif()
-
-if(VASP_SDFTD3)
-  find_package(SDFTD3 MODULE REQUIRED)
-  list(APPEND VASP_EXTERNAL_LIBS SDFTD3::sdftd3)
-  get_target_property(lib_path SDFTD3::sdftd3 IMPORTED_LOCATION)
-  if(lib_path)
-    get_filename_component(lib_dir ${lib_path} DIRECTORY)
-    list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
-  endif()
+  endforeach()
 endif()
 
 if(VASP_LIBMBD)
   find_package(LIBMBD MODULE REQUIRED)
   list(APPEND VASP_EXTERNAL_LIBS LIBMBD::libmbd)
-  get_target_property(lib_path LIBMBD::libmbd IMPORTED_LOCATION)
-  if(lib_path)
-    get_filename_component(lib_dir ${lib_path} DIRECTORY)
-    list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
-  endif()
+  foreach(lib_path IN LISTS LIBMBD_LIBRARIES)
+    if(EXISTS "${lib_path}")
+      get_filename_component(lib_dir "${lib_path}" DIRECTORY)
+      list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
+    endif()
+  endforeach()
+endif()
+
+if(VASP_SDFTD3)
+  find_package(SDFTD3 MODULE REQUIRED)
+  list(APPEND VASP_EXTERNAL_LIBS SDFTD3::sdftd3)
+  # no VASP_EXTERNAL_LIB_DIRS entry: simple-DFTD3 is commonly a static archive,
+  # which needs no RPATH. Its mctc-lib dependency is shared, but that library
+  # comes with its own imported target and CMAKE_INSTALL_RPATH_USE_LINK_PATH.
 endif()
 
 if(VASP_ELPA)
@@ -756,18 +748,25 @@ set(VASP_DEFINITIONS
   $<$<BOOL:${VASP_ROCM_HIP}>:CRAYHIP>
 )
 
-# DFTD4 API version: the define differs (DFTD4 vs DFTD4_API_V3),
-# added as plain strings so they bypass the generator-expression processing below.
+if(IFX_BUILD_DATE)
+  list(APPEND VASP_DEFINITIONS __INTEL_COMPILER_BUILD_DATE=${IFX_BUILD_DATE})
+endif()
+
+# DFTD4: symbol.inc derives DFTD4 from DFTD4_API_V3, so only one of the two
+# macros may be defined - which one depends on the installed dftd4 API.
+# The FindDFTD4 module auto-detects it (DFTD4_API_V3); VASP_DFTD4_API=V3/V4
+# overrides the detection explicitly (spack passes it from the dftd4 version).
 if(VASP_DFTD4)
-  if(VASP_DFTD4_USE_API_V3)
+  if(VASP_DFTD4_API STREQUAL "V3")
+    set(DFTD4_API_V3 TRUE)
+  elseif(VASP_DFTD4_API STREQUAL "V4")
+    set(DFTD4_API_V3 FALSE)
+  endif()
+  if(DFTD4_API_V3)
     list(APPEND VASP_DEFINITIONS DFTD4_API_V3)
   else()
     list(APPEND VASP_DEFINITIONS DFTD4)
   endif()
-endif()
-
-if(IFX_BUILD_DATE)
-  list(APPEND VASP_DEFINITIONS __INTEL_COMPILER_BUILD_DATE=${IFX_BUILD_DATE})
 endif()
 
 if(FTN_MAJOR_VERSION)

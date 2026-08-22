@@ -104,14 +104,14 @@ BLAS and LAPACK are mandatory and are detected via the default cmake packages. S
 - `-DVASP_SCALAPACK=ON|OFF`: enable ScaLAPACK, highly recommended (default: ON)
 - `-DVASP_HDF5=ON|OFF`: enable HDF5 support (default: ON)
 - `-DVASP_LIBXC=ON|OFF`: enable Libxc support (default: OFF)
-- `-DVASP_LIBBEEF=ON|OFF`: enable libbeef (van-der-Waals functionals) (default: OFF)
-- `-DVASP_DFTD4=ON|OFF`: enable DFTD4 van der Waals correction (default: OFF)
-- `-DVASP_DFTD4_API=AUTO|V3|V4`: DFTD4 API version; AUTO detects from the dftd4 package version. V3 for DFTD4 <= 3.7.0 (`-DDFTD4_API_V3`), V4 for >= 4.0.0 (`-DDFTD4`). Note: AUTO requires a CMake-config install (`dftd4-config.cmake`); for manual/non-CMake installs, set `V3` or `V4` explicitly. (default: AUTO)
-- `-DVASP_SDFTD3=ON|OFF`: enable simple-DFT-D3 van der Waals correction (default: OFF)
-- `-DVASP_LIBMBD=ON|OFF`: enable libMBD many-body dispersion (default: OFF)
+- `-DVASP_LIBBEEF=ON|OFF`: enable libbeef (van-der-Waals functionals) (default: OFF). Found via `LIBBEEF_ROOT`
+- `-DVASP_DFTD4=ON|OFF`: enable DFTD4 (default: OFF). Found via the CMake package config shipped with dftd4, otherwise via `DFTD4_ROOT` (manual fallback covers mctc-lib / multicharge dependencies). dftd4 >= 4 (D4S model) is compiled with `-DDFTD4`, older installations with `-DDFTD4_API_V3`; the choice is detected automatically
+- `-DVASP_DFTD4_API=AUTO|V3|V4`: DFTD4 API version override. AUTO (default) uses the automatic detection above; V3 / V4 select `-DDFTD4_API_V3` / `-DDFTD4` explicitly (e.g. spack passes this from the dftd4 version)
+- `-DVASP_SDFTD3=ON|OFF`: enable simple-DFTD3 (default: OFF). Found via the CMake package config shipped with simple-dftd3 (package `s-dftd3`), otherwise via `SDFTD3_ROOT` / `SIMPLE_DFTD3_ROOT`. Commonly a static archive, so its mctc-lib dependency is taken from the config target
 - `-DVASP_ELPA=ON|OFF`: enable ELPA eigenvalue solvers (requires ScaLAPACK; default: OFF)
 - `-DVASP_SCPC=ON|OFF`: enable Self-Consistent Potential Correction (requires DL_MG + PSPFFT; default: OFF)
 - `-DVASP_WANNIER90=ON|OFF`: enable Wannier90 (default: OFF)
+- `-DVASP_LIBMBD=ON|OFF`: enable libMBD many-body dispersion (default: OFF). Found via the CMake package config shipped with libmbd (package `Mbd`), otherwise via `LIBMBD_ROOT`
 - `-DVASP_USE_NVPL=AUTO|ON|OFF`: Use NVIDIA NVPL BLAS/LAPACK/ScaLAPACK  (default:AUTO)
 - `-DVASP_VECLIBFORT=ON|OFF`: Use VecLibFort for BLAS/LAPACK on Mac OS to use the Accelerate framework (default:OFF)
 
