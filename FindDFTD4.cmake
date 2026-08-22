@@ -11,7 +11,6 @@
 # DFTD4::dftd4
 
 set(_DFTD4_PATHS)
-set(_DFTD4_PATHS)
 foreach(_v DFTD4_ROOT dftd4_ROOT)
   if(DEFINED ${_v} AND NOT "${${_v}}" STREQUAL "")
     list(APPEND _DFTD4_PATHS "${${_v}}")
@@ -20,6 +19,21 @@ foreach(_v DFTD4_ROOT dftd4_ROOT)
     list(APPEND _DFTD4_PATHS "$ENV{${_v}}")
   endif()
 endforeach()
+
+# The dftd4 config package names OpenMP::OpenMP_Fortran in the link interface
+# of its imported targets, but includes those targets before it runs
+# find_dependency(OpenMP) itself. Without that target the generate step fails,
+# and VASP only searches OpenMP when VASP_OPENMP is ON (spack defaults to OFF)
+# - so make sure it exists. If we are the ones creating it, the project is not
+# built with OpenMP: keep the runtime the external library needs, but do not
+# let the OpenMP compile flag propagate into the VASP sources.
+# (Port of upstream 7705e4b for our config-first path.)
+if(NOT TARGET OpenMP::OpenMP_Fortran)
+  find_package(OpenMP QUIET COMPONENTS Fortran)
+  if(TARGET OpenMP::OpenMP_Fortran)
+    set_property(TARGET OpenMP::OpenMP_Fortran PROPERTY INTERFACE_COMPILE_OPTIONS "")
+  endif()
+endif()
 
 # --- 1) Config package (preferred; pulls transitive deps) ---
 set(_save "${CMAKE_PREFIX_PATH}")
