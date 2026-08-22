@@ -14,7 +14,6 @@
 # SDFTD3::sdftd3
 
 set(_SDFTD3_PATHS)
-set(_SDFTD3_PATHS)
 foreach(_v SDFTD3_ROOT)
   if(DEFINED ${_v} AND NOT "${${_v}}" STREQUAL "")
     list(APPEND _SDFTD3_PATHS "${${_v}}")
