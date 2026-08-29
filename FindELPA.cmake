@@ -148,8 +148,14 @@ if(ELPA_FOUND)
   set_target_properties(
     ELPA::ELPA PROPERTIES INTERFACE_LINK_LIBRARIES "${ELPA_LINK_LIBRARIES}"
                           INTERFACE_INCLUDE_DIRECTORIES "${_elpa_inc_dirs}")
-  vasp_report(ELPA "Found ELPA (pkg-config): ${ELPA_VERSION} "
-                   "(${ELPA_MODULE}) ${ELPA_LINK_LIBRARIES}")
+  # ELPA_MODULE is only set by the non-IMPORTED_TARGET search; derive the
+  # flavor from the matched libraries so the message is always populated
+  set(_elpa_flavor "serial")
+  if(ELPA_LINK_LIBRARIES MATCHES "elpa_openmp")
+    set(_elpa_flavor "openmp")
+  endif()
+  vasp_report(ELPA
+    "Found ELPA (pkg-config): ${ELPA_VERSION} (${_elpa_flavor}) ${ELPA_LINK_LIBRARIES}")
   _elpa_run_probe()
   return()
 endif()
