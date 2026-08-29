@@ -82,10 +82,39 @@ if(LibXC_Fortran_INCLUDE_DIR)
   list(REMOVE_DUPLICATES LibXC_INCLUDE_DIRS)
 endif()
 
+# --- version from xc_version.h (when present) ---
+set(LibXC_VERSION "")
+if(LibXC_C_INCLUDE_DIR AND EXISTS "${LibXC_C_INCLUDE_DIR}/xc_version.h")
+  file(STRINGS "${LibXC_C_INCLUDE_DIR}/xc_version.h" _libxc_version_defs
+       REGEX "^#define +XC_(MAJOR|MINOR|MICRO)_VERSION")
+  set(_libxc_v_major "")
+  set(_libxc_v_minor "")
+  set(_libxc_v_micro "")
+  foreach(_line IN LISTS _libxc_version_defs)
+    if(_line MATCHES "#define +XC_MAJOR_VERSION +([0-9]+)")
+      set(_libxc_v_major "${CMAKE_MATCH_1}")
+    elseif(_line MATCHES "#define +XC_MINOR_VERSION +([0-9]+)")
+      set(_libxc_v_minor "${CMAKE_MATCH_1}")
+    elseif(_line MATCHES "#define +XC_MICRO_VERSION +([0-9]+)")
+      set(_libxc_v_micro "${CMAKE_MATCH_1}")
+    endif()
+  endforeach()
+  if(_libxc_v_major)
+    set(LibXC_VERSION "${_libxc_v_major}")
+    if(_libxc_v_minor)
+      string(APPEND LibXC_VERSION ".${_libxc_v_minor}")
+      if(_libxc_v_micro)
+        string(APPEND LibXC_VERSION ".${_libxc_v_micro}")
+      endif()
+    endif()
+  endif()
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
   LibXC
   REQUIRED_VARS LibXC_LIBRARIES LibXC_FORTRAN_LIBRARIES LibXC_C_INCLUDE_DIR
+  VERSION_VAR LibXC_VERSION
   FAIL_MESSAGE
     "Could not find LibXC (need libxc + libxcf03/xcf90 and xc_f03_*.mod or xc_f90_*.mod). Set LibXC_ROOT."
 )
@@ -96,8 +125,8 @@ if(LibXC_FOUND)
                     "Fortran interface may not compile correctly.")
   endif()
   vasp_report(LibXC
-    "Found LibXC: ${LibXC_LIBRARIES} (Fortran: ${LibXC_FORTRAN_LIBRARIES}; "
-    "include dirs: ${LibXC_INCLUDE_DIRS})")
+    "Found LibXC ${LibXC_VERSION}: ${LibXC_LIBRARIES} "
+    "(Fortran: ${LibXC_FORTRAN_LIBRARIES}; include dirs: ${LibXC_INCLUDE_DIRS})")
   if(NOT TARGET LibXC::libxc)
     add_library(LibXC::libxc INTERFACE IMPORTED)
   endif()

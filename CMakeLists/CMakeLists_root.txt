@@ -679,9 +679,14 @@ endif()
 if(VASP_LIBXC)
   find_package(LibXC MODULE REQUIRED)
   list(APPEND VASP_EXTERNAL_LIBS LibXC::libxc)
-  get_target_property(lib_path LibXC::libxc IMPORTED_LOCATION)
-  get_filename_component(lib_dir ${lib_path} DIRECTORY)
-  list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
+  # LibXC::libxc is an INTERFACE target (no IMPORTED_LOCATION); collect the
+  # library directories from the resolved file paths for the RPATH
+  foreach(lib_path IN LISTS LibXC_LIBRARIES LibXC_FORTRAN_LIBRARIES)
+    if(EXISTS "${lib_path}")
+      get_filename_component(lib_dir "${lib_path}" DIRECTORY)
+      list(APPEND VASP_EXTERNAL_LIB_DIRS "${lib_dir}")
+    endif()
+  endforeach()
 endif()
 
 # licensing dependencies
