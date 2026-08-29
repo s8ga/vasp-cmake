@@ -53,13 +53,13 @@
 - [x] B7 负面测试:假老版本 `.pc`;假模块目录触发探针
 - [x] B8 提交(检测强化 + 探针两个 commit)
 
-## Phase C — 小补强
+## Phase C — 小补强 ✅(2026-08-29)
 
-- [ ] C1 FindLibXC:读 `xc_version.h` 拼版本串;`LibXC_FIND_VERSION` 下限校验;消息带版本
-- [ ] C2 root:680 修复:LibXC::libxc 是 INTERFACE target 无 `IMPORTED_LOCATION`,
+- [x] C1 FindLibXC:读 `xc_version.h` 拼版本串;`LibXC_FIND_VERSION` 下限校验;消息带版本
+- [x] C2 root:680 修复:LibXC::libxc 是 INTERFACE target 无 `IMPORTED_LOCATION`,
       改为遍历 `LibXC_LIBRARIES/LibXC_FORTRAN_LIBRARIES` 收集 RPATH 目录
-- [ ] C3 CMakeLists_vaspml:TF 版本检查(`version_macros.h` 的 `TF_VERSION_STRING`,WARNING 级)
-- [ ] C4 回归门全绿 + 提交
+- [x] C3 CMakeLists_vaspml:TF 版本检查(`version_macros.h` 的 `TF_VERSION_STRING`,WARNING 级)
+- [x] C4 回归门全绿 + 提交
 
 ## 不做的事
 
