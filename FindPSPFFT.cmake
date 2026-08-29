@@ -7,16 +7,9 @@
 #
 # PSPFFT::pspfft
 
-set(_PSPFFT_PATHS)
-set(_PSPFFT_PATHS)
-foreach(_v PSPFFT_ROOT)
-  if(DEFINED ${_v} AND NOT "${${_v}}" STREQUAL "")
-    list(APPEND _PSPFFT_PATHS "${${_v}}")
-  endif()
-  if(DEFINED ENV{${_v}} AND NOT "$ENV{${_v}}" STREQUAL "")
-    list(APPEND _PSPFFT_PATHS "$ENV{${_v}}")
-  endif()
-endforeach()
+include(vasp_find_utils)
+
+vasp_pkg_root(_PSPFFT_PATHS PSPFFT PSPFFT)
 
 find_library(
   PSPFFT_LIBRARIES
@@ -38,7 +31,7 @@ find_package_handle_standard_args(
 
 if(PSPFFT_FOUND)
   if(NOT PSPFFT_MESSAGE_SHOWN)
-    message(STATUS "Found PSPFFT: ${PSPFFT_LIBRARIES}")
+    vasp_report(PSPFFT "Found PSPFFT: ${PSPFFT_LIBRARIES}")
   endif()
   set(PSPFFT_MESSAGE_SHOWN
       TRUE

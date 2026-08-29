@@ -7,16 +7,9 @@
 #
 # DL_MG::dlmg
 
-set(_DL_MG_PATHS)
-set(_DL_MG_PATHS)
-foreach(_v DL_MG_ROOT DLMG_ROOT)
-  if(DEFINED ${_v} AND NOT "${${_v}}" STREQUAL "")
-    list(APPEND _DL_MG_PATHS "${${_v}}")
-  endif()
-  if(DEFINED ENV{${_v}} AND NOT "$ENV{${_v}}" STREQUAL "")
-    list(APPEND _DL_MG_PATHS "$ENV{${_v}}")
-  endif()
-endforeach()
+include(vasp_find_utils)
+
+vasp_pkg_root(_DL_MG_PATHS DL_MG DLMG)
 
 find_library(
   DL_MG_LIBRARIES
@@ -38,7 +31,7 @@ find_package_handle_standard_args(
 
 if(DL_MG_FOUND)
   if(NOT DL_MG_MESSAGE_SHOWN)
-    message(STATUS "Found DL_MG: ${DL_MG_LIBRARIES}")
+    vasp_report(DL_MG "Found DL_MG: ${DL_MG_LIBRARIES}")
   endif()
   set(DL_MG_MESSAGE_SHOWN
       TRUE
