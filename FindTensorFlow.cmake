@@ -15,15 +15,9 @@
 # TensorFlow::tensorflow_cc TensorFlow::tensorflow_framework
 
 # Collect ROOT hints (always, regardless of CMP0074/CMP0144)
-set(_TF_PATHS)
-foreach(_v TENSORFLOW_ROOT TensorFlow_ROOT)
-  if(DEFINED ${_v})
-    list(APPEND _TF_PATHS "${${_v}}")
-  endif()
-  if(DEFINED ENV{${_v}})
-    list(APPEND _TF_PATHS "$ENV{${_v}}")
-  endif()
-endforeach()
+include(vasp_find_utils)
+
+vasp_pkg_root(_TF_PATHS TENSORFLOW TensorFlow)
 
 # Also check spack view / CMAKE_PREFIX_PATH for Python site-packages layouts
 set(_TF_PYTHON_HINTS)
@@ -71,8 +65,8 @@ find_package_handle_standard_args(
 
 if(TensorFlow_FOUND)
   if(NOT TENSORFLOW_MESSAGE_SHOWN)
-    message(STATUS "Found TensorFlow: ${TENSORFLOW_LIBRARIES}")
-    message(STATUS "  includes: ${TENSORFLOW_INCLUDE_DIRS}")
+    vasp_report(TensorFlow
+      "Found TensorFlow: ${TENSORFLOW_LIBRARIES} (includes: ${TENSORFLOW_INCLUDE_DIRS})")
   endif()
   set(TENSORFLOW_MESSAGE_SHOWN
       TRUE
