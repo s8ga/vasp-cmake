@@ -13,15 +13,9 @@
 #
 # ELPA::ELPA
 
-set(_ELPA_PATHS)
-foreach(_v ELPA_ROOT Elpa_ROOT)
-  if(DEFINED ${_v} AND NOT "${${_v}}" STREQUAL "")
-    list(APPEND _ELPA_PATHS "${${_v}}")
-  endif()
-  if(DEFINED ENV{${_v}} AND NOT "$ENV{${_v}}" STREQUAL "")
-    list(APPEND _ELPA_PATHS "$ENV{${_v}}")
-  endif()
-endforeach()
+include(vasp_find_utils)
+
+vasp_pkg_root(_ELPA_PATHS ELPA Elpa)
 
 # --- 1) pkg-config (preferred) ---
 find_package(PkgConfig QUIET)
@@ -65,7 +59,7 @@ if(ELPA_FOUND)
   set_target_properties(
     ELPA::ELPA PROPERTIES INTERFACE_LINK_LIBRARIES "${ELPA_LINK_LIBRARIES}"
                           INTERFACE_INCLUDE_DIRECTORIES "${_elpa_inc_dirs}")
-  message(STATUS "Found ELPA (pkg-config): ${ELPA_LINK_LIBRARIES}")
+  vasp_report(ELPA "Found ELPA (pkg-config): ${ELPA_LINK_LIBRARIES}")
   return()
 endif()
 
@@ -128,7 +122,7 @@ find_package_handle_standard_args(
   FAIL_MESSAGE "Set ELPA_ROOT to the ELPA installation (>= 2021)")
 
 if(ELPA_FOUND)
-  message(STATUS "Found ELPA (fallback): ${ELPA_LIBRARIES}")
+  vasp_report(ELPA "Found ELPA (fallback): ${ELPA_LIBRARIES}")
   if(NOT TARGET ELPA::ELPA)
     add_library(ELPA::ELPA UNKNOWN IMPORTED)
     set_target_properties(
