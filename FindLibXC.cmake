@@ -18,15 +18,9 @@
 # LibXC::libxc
 
 # Collect ROOT hints (always, regardless of CMP0074/CMP0144)
-set(_LibXC_PATHS)
-foreach(_v LibXC_ROOT LIBXC_ROOT Libxc_ROOT Libxc_DIR)
-  if(DEFINED ${_v} AND NOT "${${_v}}" STREQUAL "")
-    list(APPEND _LibXC_PATHS "${${_v}}")
-  endif()
-  if(DEFINED ENV{${_v}} AND NOT "$ENV{${_v}}" STREQUAL "")
-    list(APPEND _LibXC_PATHS "$ENV{${_v}}")
-  endif()
-endforeach()
+include(vasp_find_utils)
+
+vasp_pkg_root(_LibXC_PATHS LibXC LIBXC EXTRA_VARS Libxc_ROOT Libxc_DIR)
 
 # --- C library (always required) ---
 find_library(
@@ -101,14 +95,9 @@ if(LibXC_FOUND)
     message(WARNING "LibXC Fortran module dir not found. "
                     "Fortran interface may not compile correctly.")
   endif()
-  if(NOT LIBXC_MESSAGE_SHOWN)
-    message(STATUS "Found LibXC: ${LibXC_LIBRARIES} "
-                   "(Fortran: ${LibXC_FORTRAN_LIBRARIES})")
-    message(STATUS "  LibXC include dirs: ${LibXC_INCLUDE_DIRS}")
-  endif()
-  set(LIBXC_MESSAGE_SHOWN
-      TRUE
-      CACHE INTERNAL "Message shown flag")
+  vasp_report(LibXC
+    "Found LibXC: ${LibXC_LIBRARIES} (Fortran: ${LibXC_FORTRAN_LIBRARIES}; "
+    "include dirs: ${LibXC_INCLUDE_DIRS})")
   if(NOT TARGET LibXC::libxc)
     add_library(LibXC::libxc INTERFACE IMPORTED)
   endif()
