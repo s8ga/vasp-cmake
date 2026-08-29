@@ -26,32 +26,32 @@
       cmake 构建的(1.2.1;1.4.0 那份没装 config 包)—— 与 spack 的
       `build_system=cmake` 依赖约束一致。
 
-## Phase A — 统一探测基础设施
+## Phase A — 统一探测基础设施 ✅(2026-08-29)
 
-- [ ] A1 `vasp_find_utils.cmake`:
+- [x] A1 `vasp_find_utils.cmake`:
   - `vasp_pkg_root(<out> <NAME> <PkgName> [EXTRA_VARS ...])`:
     cache `<NAME>_ROOT` → `ENV{<NAME>_ROOT}` → `<PkgName>_ROOT`(大小写变体,cache+env)
     → `ENV{<NAME>HOME}` → `ENV{EB<NAME>ROOT}`(EasyBuild)→ `ENV{CRAY_<NAME>_PREFIX_DIR}`;
     不做 `/usr` 回退。
   - `vasp_report(<PKG> <msg>)`:统一 STATUS 消息 + 一次性 cache 标志。
-- [ ] A2 FindELPA 换用(pkg-config 的 PKG_CONFIG_PATH 注入/还原保留)
-- [ ] A3 FindLibBEEF 换用 + 修 :16-17 重复 `set(_LIBBEEF_PATHS)`
-- [ ] A4 FindDL_MG / FindPSPFFT 换用 + 修两处同款重复 set
-- [ ] A5 FindTensorFlow 换用(Python site-packages glob 提示保留)
-- [ ] A6 FindLibXC 换用(4 个大小写变体名)
-- [ ] A7 验证:回归门全绿;`EBELPAROOT` 环境变量冒烟;无手写 ROOT 循环残留
+- [x] A2 FindELPA 换用(pkg-config 的 PKG_CONFIG_PATH 注入/还原保留)
+- [x] A3 FindLibBEEF 换用 + 修 :16-17 重复 `set(_LIBBEEF_PATHS)`
+- [x] A4 FindDL_MG / FindPSPFFT 换用 + 修两处同款重复 set
+- [x] A5 FindTensorFlow 换用(Python site-packages glob 提示保留)
+- [x] A6 FindLibXC 换用(4 个大小写变体名)
+- [x] A7 验证:回归门全绿;`EBELPAROOT` 环境变量冒烟;无手写 ROOT 循环残留
 
-## Phase B — ELPA 强化
+## Phase B — ELPA 强化 ✅(2026-08-29)
 
-- [ ] B1 root:`VASP_ELPA_MIN_VERSION`(默认 2021.05.001)+ 版本化 `find_package(ELPA ...)`
-- [ ] B2 pkg-config 路径用 `elpa[_openmp]>=${ELPA_FIND_VERSION}` spec;FAIL_MESSAGE 人话
-- [ ] B3 try_compile 探针(`use elpa` 迷你程序;`ELPA_SKIP_PROBE` 开关;拦截老版本与
+- [x] B1 root:`VASP_ELPA_MIN_VERSION`(默认 2021.05.001)+ 版本化 `find_package(ELPA ...)`
+- [x] B2 pkg-config 路径用 `elpa[_openmp]>=${ELPA_FIND_VERSION}` spec;FAIL_MESSAGE 人话
+- [x] B3 try_compile 探针(`use elpa` 迷你程序;`ELPA_SKIP_PROBE` 开关;拦截老版本与
       跨编译器 .mod 不匹配)
-- [ ] B4 `VASP_OPENMP=ON` + 只找到串行 elpa → WARNING
-- [ ] B5 手动 fallback 在 ScaLAPACK target 存在时补进 `ELPA::ELPA`
-- [ ] B6 状态消息带版本与 openmp 信息
-- [ ] B7 负面测试:假老版本 `.pc`;假模块目录触发探针
-- [ ] B8 提交(检测强化 + 探针两个 commit)
+- [x] B4 `VASP_OPENMP=ON` + 只找到串行 elpa → WARNING
+- [x] B5 手动 fallback 在 ScaLAPACK target 存在时补进 `ELPA::ELPA`
+- [x] B6 状态消息带版本与 openmp 信息
+- [x] B7 负面测试:假老版本 `.pc`;假模块目录触发探针
+- [x] B8 提交(检测强化 + 探针两个 commit)
 
 ## Phase C — 小补强
 
