@@ -13,16 +13,9 @@
 #
 # LibBEEF::libbeef
 
-set(_LIBBEEF_PATHS)
-set(_LIBBEEF_PATHS)
-foreach(_v LIBBEEF_ROOT LibBEEF_ROOT)
-  if(DEFINED ${_v} AND NOT "${${_v}}" STREQUAL "")
-    list(APPEND _LIBBEEF_PATHS "${${_v}}")
-  endif()
-  if(DEFINED ENV{${_v}} AND NOT "$ENV{${_v}}" STREQUAL "")
-    list(APPEND _LIBBEEF_PATHS "$ENV{${_v}}")
-  endif()
-endforeach()
+include(vasp_find_utils)
+
+vasp_pkg_root(_LIBBEEF_PATHS LIBBEEF LibBEEF)
 
 find_library(
   LIBBEEF_LIBRARIES
@@ -44,7 +37,7 @@ find_package_handle_standard_args(
 
 if(LibBEEF_FOUND)
   if(NOT LIBBEEF_MESSAGE_SHOWN)
-    message(STATUS "Found libbeef: ${LIBBEEF_LIBRARIES}")
+    vasp_report(LibBEEF "Found libbeef: ${LIBBEEF_LIBRARIES}")
   endif()
   set(LIBBEEF_MESSAGE_SHOWN
       TRUE
