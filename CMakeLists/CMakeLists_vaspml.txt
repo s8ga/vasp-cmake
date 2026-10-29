@@ -26,6 +26,21 @@ target_include_directories(vaspml
                            PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/libvaspml)
 target_link_libraries(vaspml PUBLIC MPI::MPI_CXX BLAS::BLAS)
 
+# Propagate target CPU architecture to C++ VASPml library and standalone tools
+# when explicitly set (matching fftlib/parser, without forcing -march=native
+# when unset so external wrappers such as Spack stay in control).
+if(VASP_TARGET_CPU)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+     OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
+     OR CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+    target_compile_options(
+      vaspml PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-march=${VASP_TARGET_CPU}>)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+    target_compile_options(
+      vaspml PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-tp=${VASP_TARGET_CPU}>)
+  endif()
+endif()
+
 # std::filesystem lives in a separate library (stdc++fs) on older toolchains
 # (GCC < 9). NVHPC and other compilers may use such a toolchain as their host
 # C++ standard library.
@@ -97,7 +112,9 @@ set(VASPML_MESSAGE_SHOWN
 # -----------------------------------------------------------------------
 # GRACE force field support (optional, requires TensorFlow + cppflow)
 # -----------------------------------------------------------------------
+set(_tf_rpath_dirs "")
 if(VASP_VASPML_GRACE)
+  target_compile_definitions(vaspml PUBLIC VASPML_ENABLE_GRACE)
   find_package(TensorFlow MODULE REQUIRED)
   target_link_libraries(vaspml PUBLIC TensorFlow::tensorflow_cc)
   if(TARGET TensorFlow::tensorflow_framework)
@@ -106,16 +123,19 @@ if(VASP_VASPML_GRACE)
   # cppflow is a header-only library; locate its include dir
   find_path(
     CPPFLOW_INCLUDE_DIR
-    NAMES cppflow/model
-    HINTS $ENV{CPPFLOW_ROOT} ${CPPFLOW_ROOT} $ENV{TENSORFLOW_ROOT}
+    NAMES cppflow/cppflow.h cppflow/model.h
+    HINTS ${CPPFLOW_ROOT} $ENV{CPPFLOW_ROOT} ${TENSORFLOW_ROOT}
+          $ENV{TENSORFLOW_ROOT}
     PATH_SUFFIXES include cppflow/include)
   if(CPPFLOW_INCLUDE_DIR)
-    target_include_directories(vaspml PRIVATE ${CPPFLOW_INCLUDE_DIR})
+    target_include_directories(vaspml PUBLIC ${CPPFLOW_INCLUDE_DIR})
     message(
       STATUS "VASPml GRACE: using cppflow headers from ${CPPFLOW_INCLUDE_DIR}")
   else()
     message(
-      WARNING "VASPml GRACE: cppflow headers not found. Set CPPFLOW_ROOT.")
+      FATAL_ERROR
+        "VASPml GRACE: cppflow headers (cppflow/cppflow.h) not found. Set CPPFLOW_ROOT."
+    )
   endif()
   # TensorFlow version (informational; cppflow generally needs >= 2.x)
   set(_tf_version "")
@@ -136,16 +156,23 @@ if(VASP_VASPML_GRACE)
   else()
     message(STATUS "VASPml GRACE: TensorFlow version unknown (no version_macros.h)")
   endif()
-  # Imprint TensorFlow lib path into global rpath so no env is needed at
-  # runtime. vaspml is STATIC so RPATH properties have no effect here; instead
-  # we propagate the lib dir to the parent scope where root.txt collects
-  # VASP_EXTERNAL_LIB_DIRS into CMAKE_INSTALL_RPATH for the executables.
-  get_target_property(_tf_loc TensorFlow::tensorflow_cc IMPORTED_LOCATION)
-  if(_tf_loc)
-    get_filename_component(_tf_dir ${_tf_loc} DIRECTORY)
-    list(APPEND VASP_EXTERNAL_LIB_DIRS ${_tf_dir})
-    set(VASP_EXTERNAL_LIB_DIRS
-        ${VASP_EXTERNAL_LIB_DIRS}
+  # Propagate TensorFlow runtime library directory to executables' RPATH so no
+  # LD_LIBRARY_PATH is needed at runtime (e.g. py-tensorflow installs into
+  # site-packages/tensorflow/ outside standard lib/). vaspml is STATIC so RPATH
+  # must be attached to final executable targets (here + parent src/ scope).
+  foreach(_tf_tgt TensorFlow::tensorflow_cc TensorFlow::tensorflow_framework)
+    if(TARGET ${_tf_tgt})
+      get_target_property(_tf_loc ${_tf_tgt} IMPORTED_LOCATION)
+      if(_tf_loc)
+        get_filename_component(_tf_dir "${_tf_loc}" DIRECTORY)
+        list(APPEND _tf_rpath_dirs "${_tf_dir}")
+      endif()
+    endif()
+  endforeach()
+  list(REMOVE_DUPLICATES _tf_rpath_dirs)
+  if(_tf_rpath_dirs)
+    set(VASPML_RPATH_DIRS
+        "${_tf_rpath_dirs}"
         PARENT_SCOPE)
   endif()
   message(STATUS "VASPml GRACE: enabled (TensorFlow + cppflow)")
@@ -163,5 +190,9 @@ foreach(app_source ${VASPML_APP_SOURCES})
   get_filename_component(app_name ${app_source} NAME_WE)
   add_executable(${app_name} ${app_source})
   target_link_libraries(${app_name} PRIVATE vaspml MPI::MPI_CXX)
+  if(_tf_rpath_dirs)
+    set_property(TARGET ${app_name} APPEND PROPERTY BUILD_RPATH ${_tf_rpath_dirs})
+    set_property(TARGET ${app_name} APPEND PROPERTY INSTALL_RPATH ${_tf_rpath_dirs})
+  endif()
   install(TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach()
